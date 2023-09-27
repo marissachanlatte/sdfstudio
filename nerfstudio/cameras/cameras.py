@@ -653,6 +653,7 @@ class Cameras(TensorDataclass):
         assert directions_stack.shape == (3,) + num_rays_shape + (3,)
 
         c2w = self.camera_to_worlds[true_indices]
+
         assert c2w.shape == num_rays_shape + (3, 4)
 
         if camera_opt_to_camera is not None:

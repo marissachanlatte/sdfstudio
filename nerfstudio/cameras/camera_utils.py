@@ -22,7 +22,9 @@ from typing import List, Optional, Tuple
 import numpy as np
 import torch
 from torchtyping import TensorType
+from jaxtyping import Float
 from typing_extensions import Literal
+from torch import Tensor
 
 _EPS = np.finfo(float).eps * 4.0
 
@@ -200,29 +202,39 @@ def get_interpolated_k(k_a, k_b, steps: int = 10) -> TensorType[3, 4]:
 
 
 def get_interpolated_poses_many(
-    poses: TensorType["num_poses", 3, 4],
-    Ks: TensorType["num_poses", 3, 3],
-    steps_per_transition=10,
-) -> Tuple[TensorType["num_poses", 3, 4], TensorType["num_poses", 3, 3]]:
+    poses: Float[Tensor, "num_poses 3 4"],
+    Ks: Float[Tensor, "num_poses 3 3"],
+    steps_per_transition: int = 10,
+    order_poses: bool = False,
+) -> Tuple[Float[Tensor, "num_poses 3 4"], Float[Tensor, "num_poses 3 3"]]:
     """Return interpolated poses for many camera poses.
 
     Args:
         poses: list of camera poses
         Ks: list of camera intrinsics
         steps_per_transition: number of steps per transition
+        order_poses: whether to order poses by euclidian distance
 
     Returns:
         tuple of new poses and intrinsics
     """
     traj = []
-    Ks = []
+    k_interp = []
+
+    if order_poses:
+        poses, Ks = get_ordered_poses_and_k(poses, Ks)
+
     for idx in range(poses.shape[0] - 1):
-        pose_a = poses[idx]
-        pose_b = poses[idx + 1]
+        pose_a = poses[idx].cpu().numpy()
+        pose_b = poses[idx + 1].cpu().numpy()
         poses_ab = get_interpolated_poses(pose_a, pose_b, steps=steps_per_transition)
-        traj += poses_ab
-        Ks += get_interpolated_k(Ks[idx], Ks[idx + 1], steps_per_transition)
-    return torch.stack(traj, dim=0), torch.stack(Ks, dim=0)
+        traj += [poses_ab[0][:3]]
+        k_interp += get_interpolated_k(Ks[idx], Ks[idx + 1], steps=steps_per_transition)
+
+    traj = np.stack(traj, axis=0)
+    k_interp = torch.stack(k_interp, dim=0)
+    
+    return torch.tensor(traj, dtype=torch.float32), torch.tensor(k_interp, dtype=torch.float32)
 
 
 def normalize(x) -> TensorType[...]:

@@ -556,7 +556,7 @@ def run_colmap(
         mapper_cmd.append("--Mapper.ba_global_function_tolerance 1e-6")
 
     mapper_cmd = " ".join(mapper_cmd)
-
+    
     with status(
         msg="[bold yellow]Running COLMAP bundle adjustment... (This may take a while)",
         spinner="circle",

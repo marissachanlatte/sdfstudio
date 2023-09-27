@@ -43,7 +43,7 @@ class ProcessImages:
     """Path the data, either a video file or a directory of images."""
     output_dir: Path
     """Path to the output directory."""
-    camera_type: Literal["perspective", "fisheye"] = "perspective"
+    camera_type: Literal["perspective", "fisheye", "simple"] = "simple"
     """Camera model to use."""
     matching_method: Literal["exhaustive", "sequential", "vocab_tree"] = "vocab_tree"
     """Feature matching method to use. Vocab tree is recommended for a balance of speed and
@@ -71,9 +71,9 @@ class ProcessImages:
     num_downscales: int = 3
     """Number of times to downscale the images. Downscales by 2 each time. For example a value of 3
         will downscale the images by 2x, 4x, and 8x."""
-    skip_colmap: bool = False
+    skip_colmap: bool = True
     """If True, skips COLMAP and generates transforms.json if possible."""
-    colmap_cmd: str = "colmap"
+    colmap_cmd: str = "shifter --image=colmap/colmap colmap"
     """How to call the COLMAP executable."""
     gpu: bool = True
     """If True, use GPU."""
@@ -83,7 +83,7 @@ class ProcessImages:
     def main(self) -> None:
         """Process images into a nerfstudio dataset."""
         install_checks.check_ffmpeg_installed()
-        install_checks.check_colmap_installed()
+        #install_checks.check_colmap_installed()
 
         self.output_dir.mkdir(parents=True, exist_ok=True)
         image_dir = self.output_dir / "images"
@@ -92,15 +92,17 @@ class ProcessImages:
         summary_log = []
 
         # Copy images to output directory
-        num_frames = process_data_utils.copy_images(self.data, image_dir=image_dir, verbose=self.verbose)
+        num_frames = process_data_utils.copy_images(self.data / "images", image_dir=image_dir, verbose=self.verbose)
         summary_log.append(f"Starting with {num_frames} images")
 
         # Downscale images
         summary_log.append(process_data_utils.downscale_images(image_dir, self.num_downscales, verbose=self.verbose))
 
         # Run COLMAP
-        colmap_dir = self.output_dir / "colmap"
+        if self.skip_colmap:
+            colmap_dir = self.data
         if not self.skip_colmap:
+            colmap_dir = self.output_dir / "colmap"
             colmap_dir.mkdir(parents=True, exist_ok=True)
 
             (sfm_tool, feature_type, matcher_type) = process_data_utils.find_tool_feature_matcher_combination(
@@ -169,7 +171,7 @@ class ProcessVideo:
     """Path to the output directory."""
     num_frames_target: int = 300
     """Target number of frames to use for the dataset, results may not be exact."""
-    camera_type: Literal["perspective", "fisheye"] = "perspective"
+    camera_type: Literal["perspective", "fisheye", "simple"] = "simple"
     """Camera model to use."""
     matching_method: Literal["exhaustive", "sequential", "vocab_tree"] = "vocab_tree"
     """Feature matching method to use. Vocab tree is recommended for a balance of speed and
@@ -197,9 +199,10 @@ class ProcessVideo:
     num_downscales: int = 3
     """Number of times to downscale the images. Downscales by 2 each time. For example a value of 3
         will downscale the images by 2x, 4x, and 8x."""
-    skip_colmap: bool = False
+    skip_colmap: bool = True
     """If True, skips COLMAP and generates transforms.json if possible."""
-    colmap_cmd: str = "colmap"
+    #colmap_cmd: str = "colmap"
+    colmap_cmd: str = "shifter --image=colmap/colmap colmap"
     """How to call the COLMAP executable."""
     gpu: bool = True
     """If True, use GPU."""
@@ -209,7 +212,7 @@ class ProcessVideo:
     def main(self) -> None:
         """Process video into a nerfstudio dataset."""
         install_checks.check_ffmpeg_installed()
-        install_checks.check_colmap_installed()
+        #install_checks.check_colmap_installed()
 
         self.output_dir.mkdir(parents=True, exist_ok=True)
         image_dir = self.output_dir / "images"
@@ -304,9 +307,9 @@ class ProcessInsta360:
     num_downscales: int = 3
     """Number of times to downscale the images. Downscales by 2 each time. For example a value of 3
         will downscale the images by 2x, 4x, and 8x."""
-    skip_colmap: bool = False
+    skip_colmap: bool = True
     """If True, skips COLMAP and generates transforms.json if possible."""
-    colmap_cmd: str = "colmap"
+    colmap_cmd: str = "shifter --image=colmap/colmap colmap"
     """How to call the COLMAP executable."""
     gpu: bool = True
     """If True, use GPU."""
@@ -316,7 +319,7 @@ class ProcessInsta360:
     def main(self) -> None:
         """Process video into a nerfstudio dataset."""
         install_checks.check_ffmpeg_installed()
-        install_checks.check_colmap_installed()
+        #install_checks.check_colmap_installed()
 
         self.output_dir.mkdir(parents=True, exist_ok=True)
         image_dir = self.output_dir / "images"

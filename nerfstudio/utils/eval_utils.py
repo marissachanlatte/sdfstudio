@@ -41,6 +41,7 @@ def eval_load_checkpoint(config: cfg.TrainerConfig, pipeline: Pipeline) -> Path:
         config (DictConfig): Configuration of pipeline to load
         pipeline (Pipeline): Pipeline instance of which to load weights
     """
+
     assert config.load_dir is not None
     if config.load_step is None:
         CONSOLE.print("Loading latest checkpoint from load_dir")

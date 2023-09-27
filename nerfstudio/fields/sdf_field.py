@@ -408,6 +408,37 @@ class SDFField(Field):
             if l < self.num_layers - 2:
                 x = self.softplus(x)
         return x
+    
+    def forward_varnetwork(self, inputs):
+        """forward the varnetwork"""
+        if self.use_grid_feature:
+            #TODO normalize inputs depending on the whether we model the background or not
+            positions = (inputs + 2.0) / 4.0
+            # positions = (inputs + 1.0) / 2.0
+            feature = self.encoding(positions)
+            # mask feature
+            feature = feature * self.hash_encoding_mask.to(feature.device)
+        else:
+            feature = torch.zeros_like(inputs[:, :1].repeat(1, self.encoding.n_output_dims))
+
+        pe = self.position_encoding(inputs)
+        if not self.config.use_position_encoding:
+            pe = torch.zeros_like(pe)
+        
+        inputs = torch.cat((inputs, pe, feature), dim=-1)
+
+        x = inputs
+
+        for l in range(0, self.num_layers - 1):
+            lin = getattr(self, "glin" + str(l))
+
+            if l in self.skip_in:
+                x = torch.cat([x, inputs], 1) / np.sqrt(2)
+
+            x = lin(x)
+            if l == self.num_layers - 2:
+                x = x**2 + 1e-5
+        return x
 
     def get_sdf(self, ray_samples: RaySamples):
         """predict the sdf value for ray samples"""
@@ -417,6 +448,14 @@ class SDFField(Field):
         sdf, _ = torch.split(h, [1, self.config.geo_feat_dim], dim=-1)
         return sdf
 
+    ## add variance prediction network
+    def get_var(self, ray_samples: RaySamples):
+        positions = ray_samples.frustums.get_start_positions()
+        positions_flat = positions.view(-1, 3)
+        h = self.forward_varnetwork(positions_flat).view(*ray_samples.frustums.shape, -1)
+        var, _ = torch.split(h, [1, self.config.geo_feat_dim], dim=-1)
+        return var
+    
     def set_numerical_gradients_delta(self, delta: float) -> None:
         """Set the delta value for numerical gradient."""
         self.numerical_gradients_delta = delta
@@ -657,7 +696,7 @@ class SDFField(Field):
         rgb = self.get_colors(inputs, directions_flat, gradients, geo_feature, camera_indices)
 
         density = self.laplace_density(sdf)
-
+        
         rgb = rgb.view(*ray_samples.frustums.directions.shape[:-1], -1)
         sdf = sdf.view(*ray_samples.frustums.directions.shape[:-1], -1)
         density = density.view(*ray_samples.frustums.directions.shape[:-1], -1)
@@ -665,6 +704,9 @@ class SDFField(Field):
         normals = F.normalize(gradients, p=2, dim=-1)
         points_norm = points_norm.view(*ray_samples.frustums.directions.shape[:-1], -1)
         
+        var = self.get_var(ray_samples)
+        var = var.view(*ray_samples.frustums.directions.shape[:-1], -1)
+
         outputs.update(
             {
                 FieldHeadNames.RGB: rgb,
@@ -674,6 +716,7 @@ class SDFField(Field):
                 FieldHeadNames.GRADIENT: gradients,
                 "points_norm": points_norm,
                 "sampled_sdf": sampled_sdf,
+                "variance": var,
             }
         )
 

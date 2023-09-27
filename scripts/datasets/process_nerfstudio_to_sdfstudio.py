@@ -54,6 +54,7 @@ def main(args):
         # load images
         file_path = Path(frame["file_path"])
         img_path = input_dir / "images" / file_path.name
+        print(img_path)
         assert img_path.exists()
         image_paths.append(img_path)
 

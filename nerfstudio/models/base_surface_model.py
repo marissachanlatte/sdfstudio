@@ -24,6 +24,7 @@ from typing import Dict, List, Tuple, Type
 
 import torch
 import torch.nn.functional as F
+import numpy as np
 from torch.nn import Parameter
 from torchmetrics import PeakSignalNoiseRatio
 from torchmetrics.functional import structural_similarity_index_measure
@@ -218,6 +219,7 @@ class SurfaceModel(Model):
         )
         self.sensor_depth_loss = SensorDepthLoss(truncation=self.config.sensor_depth_truncation)
 
+
         # metrics
         self.psnr = PeakSignalNoiseRatio(data_range=1.0)
         self.ssim = structural_similarity_index_measure
@@ -372,7 +374,12 @@ class SurfaceModel(Model):
         if self.training:
             # eikonal loss
             grad_theta = outputs["eik_grad"]
-            loss_dict["eikonal_loss"] = ((grad_theta.norm(2, dim=-1) - 1) ** 2).mean() * self.config.eikonal_loss_mult
+            eikonal_loss = (grad_theta.norm(2, dim=-1) - 1) ** 2
+            loss_dict["eikonal_loss"] = (eikonal_loss).mean() * self.config.eikonal_loss_mult
+
+            # variance loss
+            sigma = outputs["field_outputs"]["variance"].squeeze(dim=2)
+            loss_dict["var_loss"] = (eikonal_loss/(sigma) + torch.log(sigma)).mean() * self.config.eikonal_loss_mult
 
             # foreground mask loss
             if "fg_mask" in batch and self.config.fg_mask_loss_mult > 0.0:

@@ -87,7 +87,7 @@ def get_surface_sliding(
                 for pid, pts in enumerate(points_pyramid):
                     coarse_N = pts.shape[-1]
                     pts = pts.reshape(3, -1).permute(1, 0).contiguous()
-
+                    
                     if mask is None:
                         # only evaluate
                         if coarse_mask is not None:
@@ -121,6 +121,13 @@ def get_surface_sliding(
                     threshold /= 2.0
 
                 z = pts_sdf.detach().cpu().numpy()
+
+                # Save SDF
+                filename = str(output_path)
+                sdf_filename = str(output_path).replace(".ply", "-sdf")
+                np.savez(sdf_filename, values=z, bound_min=np.array([x_min, y_min, z_min]), 
+                    bound_max=np.array([x_max, y_max, z_max]), resolution=resolution)
+                print("Saved SDF to ", sdf_filename)
 
                 # skip if no surface found
                 if current_mask is not None:
@@ -228,7 +235,7 @@ def get_surface_sliding_with_contraction(
     inv_contraction=None,
     max_range=32.0,
 ):
-    assert resolution % 512 == 0
+    assert resolution % 64 == 0
 
     resN = resolution
     cropN = 512
