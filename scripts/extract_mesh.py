@@ -60,52 +60,6 @@ class ExtractMesh:
     """torch precision"""
     torch_precision: Literal["highest", "high"] = "high"
 
-    def get_var(self, bounding_box_min, bounding_box_max, var, res, output_path):
-        grid_min = bounding_box_min
-        grid_max = bounding_box_max
-        x = np.linspace(grid_min[0], grid_max[0], num=res)
-        y = np.linspace(grid_min[1], grid_max[1], num=res)
-        z = np.linspace(grid_min[2], grid_max[2], num=res)
-
-        xx, yy, zz = np.meshgrid(x, y, z, indexing="ij")
-        points = torch.tensor(np.vstack([xx.ravel(), yy.ravel(), zz.ravel()]).T, dtype=torch.float).cuda()
-
-        def evaluate(points):
-            with torch.no_grad():
-                z = []
-                for i, pnts in enumerate(torch.split(points, 100000, dim=0)):
-                    z.append(var(pnts))
-                z = torch.cat(z, axis=0)
-            return z
-
-        # construct point pyramids
-
-        points = points.reshape(res, res, res, 3).permute(3, 0, 1, 2)
-        points_pyramid = [points]
-
-        avg_pool_3d = torch.nn.AvgPool3d(2, stride=2)
-
-        for _ in range(3):
-            points = avg_pool_3d(points[None])[0]
-            points_pyramid.append(points)
-        points_pyramid = points_pyramid[::-1]
-
-        # for pid, pts in enumerate(points_pyramid):
-        #     coarse_N = pts.shape[-1]
-        #     pts = pts.reshape(3, -1).permute(1, 0).contiguous()
-        #     import pdb; pdb.set_trace()
-        #     pts_var = evaluate(pts)
-        
-        pts = points_pyramid[3]
-        pts = pts.reshape(3, -1).permute(1, 0).contiguous()
-        pts_var = evaluate(pts)
-        z = pts_var.detach().cpu().numpy()
-
-        # Save var
-        var_filename = str(output_path).replace(".ply", "-var")
-        np.savez(var_filename, values=z, bound_min=np.array([grid_min[0], grid_min[1], grid_min[2]]), 
-            bound_max=np.array([grid_max[0], grid_max[1], grid_max[2]]), resolution=res)
-        print("Saved Uncertainty to ", var_filename)
 
     def main(self) -> None:
         """Main function."""
@@ -179,17 +133,7 @@ class ExtractMesh:
                 output_path=self.output_path,
                 simplify_mesh=self.simplify_mesh,
             )
-        
-        ## save variance prediction
-        self.get_var(self.bounding_box_min,
-                self.bounding_box_max,
-                lambda x: pipeline.model.field.forward_varnetwork(x)[:, 0].contiguous(),
-                self.resolution,
-                self.output_path)
-
-
-
-    
+            
 
 
 def entrypoint():

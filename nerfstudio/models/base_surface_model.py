@@ -377,10 +377,6 @@ class SurfaceModel(Model):
             eikonal_loss = (grad_theta.norm(2, dim=-1) - 1) ** 2
             loss_dict["eikonal_loss"] = (eikonal_loss).mean() * self.config.eikonal_loss_mult
 
-            # variance loss
-            sigma = outputs["field_outputs"]["variance"].squeeze(dim=2)
-            loss_dict["var_loss"] = (eikonal_loss/(sigma) + torch.log(sigma)).mean() * self.config.eikonal_loss_mult
-
             # foreground mask loss
             if "fg_mask" in batch and self.config.fg_mask_loss_mult > 0.0:
                 fg_label = batch["fg_mask"].float().to(self.device)
