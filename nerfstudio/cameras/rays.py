@@ -70,7 +70,10 @@ class Frustums(TensorDataclass):
         Returns:
             xyz positions.
         """
-        return self.origins + self.directions * self.starts
+        pos = self.origins + self.directions * self.starts
+        if self.offsets is not None:
+            pos = pos + self.offsets
+        return pos
 
     def get_gaussian_blob(self) -> Gaussians:
         """Calculates guassian approximation of conical frustum.
