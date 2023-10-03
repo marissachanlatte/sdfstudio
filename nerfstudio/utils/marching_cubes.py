@@ -23,21 +23,23 @@ def get_surface_sliding(
     output_path: Path = Path("test.ply"),
     simplify_mesh=True,
 ):
-    assert resolution % 512 == 0
+    #assert resolution % 512 == 0
     if coarse_mask is not None:
         # we need to permute here as pytorch's grid_sample use (z, y, x)
         coarse_mask = coarse_mask.permute(2, 1, 0)[None, None].cuda().float()
 
     resN = resolution
-    cropN = 512
+    cropN = resolution
     level = 0
     N = resN // cropN
-
-    grid_min = bounding_box_min
+ 
+    grid_min = bounding_box_min 
     grid_max = bounding_box_max
+    
     xs = np.linspace(grid_min[0], grid_max[0], N + 1)
     ys = np.linspace(grid_min[1], grid_max[1], N + 1)
     zs = np.linspace(grid_min[2], grid_max[2], N + 1)
+    
 
     # print(xs)
     # print(ys)
@@ -77,6 +79,7 @@ def get_surface_sliding(
 
                 points_pyramid = [points]
                 for _ in range(3):
+                    import pdb; pdb.set_trace()
                     points = avg_pool_3d(points[None])[0]
                     points_pyramid.append(points)
                 points_pyramid = points_pyramid[::-1]
@@ -102,7 +105,6 @@ def get_surface_sliding(
                     else:
                         mask = mask.reshape(-1)
                         pts_to_eval = pts[mask]
-
                         if pts_to_eval.shape[0] > 0:
                             pts_sdf_eval = evaluate(pts_to_eval.contiguous())
                             pts_sdf[mask] = pts_sdf_eval
@@ -235,10 +237,10 @@ def get_surface_sliding_with_contraction(
     inv_contraction=None,
     max_range=32.0,
 ):
-    assert resolution % 64 == 0
+    #assert resolution % 64 == 0
 
     resN = resolution
-    cropN = 512
+    cropN = resolution
     level = 0
     N = resN // cropN
 
@@ -281,7 +283,7 @@ def get_surface_sliding_with_contraction(
                 # query coarse grids
                 points_tmp = points[None].cuda() * 0.5  # normalize from [-2, 2] to [-1, 1]
                 current_mask = torch.nn.functional.grid_sample(coarse_mask, points_tmp)
-
+                
                 points = points.reshape(-1, 3)
                 valid_mask = current_mask.reshape(-1) > 0
                 pts_to_eval = points[valid_mask]
