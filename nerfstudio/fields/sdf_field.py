@@ -413,8 +413,8 @@ class SDFField(Field):
     def get_sdf(self, ray_samples: RaySamples):
         """predict the sdf value for ray samples"""
         positions = ray_samples.frustums.get_start_positions()
-        positions_flat = positions.view(-1, 3)
-        h = self.forward_geonetwork(positions_flat).view(*ray_samples.frustums.shape, -1)
+        positions_flat = positions.reshape(-1, 3)
+        h = self.forward_geonetwork(positions_flat).reshape(*ray_samples.frustums.shape, -1)
         sdf, _ = torch.split(h, [1, self.config.geo_feat_dim], dim=-1)
         return sdf
 
@@ -444,7 +444,7 @@ class SDFField(Field):
                 dim=0,
             )
 
-            points_sdf = self.forward_geonetwork(points.view(-1, 3))[..., 0].view(6, *x.shape[:-1])
+            points_sdf = self.forward_geonetwork(points.reshape(-1, 3))[..., 0].reshape(6, *x.shape[:-1])
             gradients = torch.stack(
                 [
                     0.5 * (points_sdf[0] - points_sdf[1]) / delta,
@@ -469,8 +469,8 @@ class SDFField(Field):
     def get_density(self, ray_samples: RaySamples):
         """Computes and returns the densities."""
         positions = ray_samples.frustums.get_start_positions()
-        positions_flat = positions.view(-1, 3)
-        h = self.forward_geonetwork(positions_flat).view(*ray_samples.frustums.shape, -1)
+        positions_flat = positions.reshape(-1, 3)
+        h = self.forward_geonetwork(positions_flat).reshape(*ray_samples.frustums.shape, -1)
         sdf, geo_feature = torch.split(h, [1, self.config.geo_feat_dim], dim=-1)
         density = self.laplace_density(sdf)
         return density, geo_feature
@@ -536,9 +536,9 @@ class SDFField(Field):
 
         # diffuse color and specular tint
         if self.config.use_diffuse_color:
-            raw_rgb_diffuse = self.diffuse_color_pred(geo_features.view(-1, self.config.geo_feat_dim))
+            raw_rgb_diffuse = self.diffuse_color_pred(geo_features.reshape(-1, self.config.geo_feat_dim))
         if self.config.use_specular_tint:
-            tint = self.sigmoid(self.specular_tint_pred(geo_features.view(-1, self.config.geo_feat_dim)))
+            tint = self.sigmoid(self.specular_tint_pred(geo_features.reshape(-1, self.config.geo_feat_dim)))
 
         normals = F.normalize(gradients, p=2, dim=-1)
 
@@ -567,16 +567,16 @@ class SDFField(Field):
         if self.config.use_diffuse_color:
             h = [
                 d,
-                geo_features.view(-1, self.config.geo_feat_dim),
-                embedded_appearance.view(-1, self.config.appearance_embedding_dim),
+                geo_features.reshape(-1, self.config.geo_feat_dim),
+                embedded_appearance.reshape(-1, self.config.appearance_embedding_dim),
             ]
         else:
             h = [
                 points,
                 d,
                 gradients,
-                geo_features.view(-1, self.config.geo_feat_dim),
-                embedded_appearance.view(-1, self.config.appearance_embedding_dim),
+                geo_features.reshape(-1, self.config.geo_feat_dim),
+                embedded_appearance.reshape(-1, self.config.appearance_embedding_dim),
             ]
 
         if self.config.use_n_dot_v:
@@ -623,7 +623,7 @@ class SDFField(Field):
         camera_indices = ray_samples.camera_indices.squeeze()
 
         inputs = ray_samples.frustums.get_start_positions()
-        inputs = inputs.view(-1, 3)
+        inputs = inputs.reshape(-1, 3)
 
         directions = ray_samples.frustums.directions
         directions_flat = directions.reshape(-1, 3)
@@ -643,7 +643,7 @@ class SDFField(Field):
                 skip_spatial_distortion=True,
                 return_sdf=True,
             )
-            sampled_sdf = sampled_sdf.view(-1, *ray_samples.frustums.directions.shape[:-1]).permute(1, 2, 0).contiguous()
+            sampled_sdf = sampled_sdf.reshape(-1, *ray_samples.frustums.directions.shape[:-1]).permute(1, 2, 0).contiguous()
         else:
             d_output = torch.ones_like(sdf, requires_grad=False, device=sdf.device)
             gradients = torch.autograd.grad(
@@ -660,12 +660,12 @@ class SDFField(Field):
 
         density = self.laplace_density(sdf)
         
-        rgb = rgb.view(*ray_samples.frustums.directions.shape[:-1], -1)
-        sdf = sdf.view(*ray_samples.frustums.directions.shape[:-1], -1)
-        density = density.view(*ray_samples.frustums.directions.shape[:-1], -1)
-        gradients = gradients.view(*ray_samples.frustums.directions.shape[:-1], -1)
+        rgb = rgb.reshape(*ray_samples.frustums.directions.shape[:-1], -1)
+        sdf = sdf.reshape(*ray_samples.frustums.directions.shape[:-1], -1)
+        density = density.reshape(*ray_samples.frustums.directions.shape[:-1], -1)
+        gradients = gradients.reshape(*ray_samples.frustums.directions.shape[:-1], -1)
         normals = F.normalize(gradients, p=2, dim=-1)
-        points_norm = points_norm.view(*ray_samples.frustums.directions.shape[:-1], -1)
+        points_norm = points_norm.reshape(*ray_samples.frustums.directions.shape[:-1], -1)
 
         outputs.update(
             {

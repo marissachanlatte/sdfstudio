@@ -192,7 +192,7 @@ class NeRFEncoding(Encoding):
             scaled_inputs = torch.matmul(in_tensor, self.P.to(in_tensor.device))[..., None] * freqs
         else:
             scaled_inputs = in_tensor[..., None] * freqs  # [..., "input_dim", "num_scales"]
-        scaled_inputs = scaled_inputs.view(*scaled_inputs.shape[:-2], -1)  # [..., "input_dim" * "num_scales"]
+        scaled_inputs = scaled_inputs.reshape(*scaled_inputs.shape[:-2], -1)  # [..., "input_dim" * "num_scales"]
 
         if covs is None:
             encoded_inputs = torch.sin(torch.cat([scaled_inputs, scaled_inputs + torch.pi / 2.0], dim=-1))

@@ -138,8 +138,6 @@ def interlevel_loss_zip(weights_list, ray_samples_list):
         # 2. step blur with different r
         x_r, y_r = blur_stepfun(c, w_normalize, r)
         y_r = torch.clip(y_r, min=0)
-        if not (y_r >= 0.0).all():
-            import pdb; pdb.set_trace()
         assert (y_r >= 0.0).all()
 
         # 3. accumulate

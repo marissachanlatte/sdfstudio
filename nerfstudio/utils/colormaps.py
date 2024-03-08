@@ -33,6 +33,7 @@ def apply_colormap(image: TensorType["bs":..., 1], cmap="viridis", normalize=Fal
     Returns:
         TensorType: Colored image
     """
+
     eps = 1e-9
     if normalize:
         image = image - torch.min(image)

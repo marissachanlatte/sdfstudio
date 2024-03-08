@@ -33,7 +33,10 @@ def get_surface_sliding(
     level = 0
     N = resN // cropN
  
-    grid_min = bounding_box_min 
+    # Need to adjust bounding box to maintain cell size consistency
+    # Shifting by delta
+    delta = (np.array(bounding_box_max) - np.array(bounding_box_min)) / resolution
+    grid_min = np.array(bounding_box_min) + delta
     grid_max = bounding_box_max
     
     xs = np.linspace(grid_min[0], grid_max[0], N + 1)
@@ -79,7 +82,6 @@ def get_surface_sliding(
 
                 points_pyramid = [points]
                 for _ in range(3):
-                    import pdb; pdb.set_trace()
                     points = avg_pool_3d(points[None])[0]
                     points_pyramid.append(points)
                 points_pyramid = points_pyramid[::-1]
@@ -130,7 +132,6 @@ def get_surface_sliding(
                 np.savez(sdf_filename, values=z, bound_min=np.array([x_min, y_min, z_min]), 
                     bound_max=np.array([x_max, y_max, z_max]), resolution=resolution)
                 print("Saved SDF to ", sdf_filename)
-
                 # skip if no surface found
                 if current_mask is not None:
                     valid_z = z.reshape(cropN, cropN, cropN)[current_mask]

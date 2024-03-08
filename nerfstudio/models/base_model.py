@@ -186,7 +186,7 @@ class Model(nn.Module):
             if not torch.is_tensor(outputs_list[0]):
                 # TODO: handle lists of tensors as well
                 continue
-            outputs[output_name] = torch.cat(outputs_list).view(image_height, image_width, -1)  # type: ignore
+            outputs[output_name] = torch.cat(outputs_list).reshape(image_height, image_width, -1)  # type: ignore
         return outputs
 
     @abstractmethod

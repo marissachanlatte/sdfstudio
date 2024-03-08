@@ -122,7 +122,7 @@ class ExtractMesh:
                 output_path=self.output_path,
             )
         else:
-            assert self.resolution % 512 == 0
+            #assert self.resolution % 512 == 0
             # for sdf we can multi-scale extraction.
             get_surface_sliding(
                 sdf=lambda x: pipeline.model.field.forward_geonetwork(x)[:, 0].contiguous(),

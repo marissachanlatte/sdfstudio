@@ -71,7 +71,7 @@ class ProcessImages:
     num_downscales: int = 3
     """Number of times to downscale the images. Downscales by 2 each time. For example a value of 3
         will downscale the images by 2x, 4x, and 8x."""
-    skip_colmap: bool = True
+    skip_colmap: bool = False
     """If True, skips COLMAP and generates transforms.json if possible."""
     colmap_cmd: str = "shifter --image=colmap/colmap colmap"
     """How to call the COLMAP executable."""
